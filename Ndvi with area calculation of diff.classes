@@ -1,0 +1,55 @@
+here is the code of ndvi with area of different classes:
+++++ print(table.first())
+var upz = table.filter(ee.Filter.eq("NAME_3", "Matlab"))
+print(upz)
+Map.centerObject(upz)
+var landsat_image = ee.ImageCollection("LANDSAT/LC09/C02/T1_L2")
+    .filterDate("2022-01-01", "2022-12-31")
+    .filterMetadata('CLOUD_COVER', 'less_than', 10)
+    .filterBounds(upz) 
+    .min()
+    .clip(upz);
+print(landsat_image);
+
+var ndvi = landsat_image.normalizedDifference(["SR_B5","SR_B4"]).rename("NDVI")
+
+Map.addLayer(landsat_image)
+Map.addLayer(ndvi)
+
+var water = ndvi.select("NDVI").lt(0.01);
+var bareLand = ndvi.select("NDVI").gte(0.01).and(ndvi.select("NDVI").lt(0.1));
+var lowVegetation = ndvi.select("NDVI").gte(0.1).and(ndvi.select("NDVI").lt(0.5));
+var highVegetation = ndvi.select("NDVI").gte(0.5);
+
+var areaWater = water.multiply(ee.Image.pixelArea()).reduceRegion({
+  reducer: ee.Reducer.sum(),
+  geometry:upz.geometry(),
+  scale: 30,
+  maxPixels: 1e9
+});
+
+var areaBareLand = bareLand.multiply(ee.Image.pixelArea()).reduceRegion({
+  reducer: ee.Reducer.sum(),
+  geometry:upz.geometry(),
+  scale: 30,
+  maxPixels: 1e9
+});
+
+var areaLowVegetation = lowVegetation.multiply(ee.Image.pixelArea()).reduceRegion({
+  reducer: ee.Reducer.sum(),
+  geometry:upz.geometry(),
+  scale: 30,
+  maxPixels: 1e9
+});
+
+var areaHighVegetation = highVegetation.multiply(ee.Image.pixelArea()).reduceRegion({
+  reducer: ee.Reducer.sum(),
+  geometry:upz.geometry(),
+  scale: 30,
+  maxPixels: 1e9
+});
+
+print('Area of Water body (in square meters):', areaWater.get("NDVI"));
+print('Area of Bare Land (in square meters):', areaBareLand.get("NDVI"));
+print('Area of Low Vegetation (in square meters):', areaLowVegetation.get("NDVI"));
+print('Area of High Vegetation (in square meters):', areaHighVegetation.get("NDVI"));
